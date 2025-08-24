@@ -14,7 +14,6 @@
 		<RepositoryType>git</RepositoryType>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>../README.md</PackageReadmeFile>
-		<PackageLicenseFile>../LICENSE</PackageLicenseFile>
 		<PackageTags>bitpacking;compression;packing;bits;storage;memory;optimization;performance;range;biginteger;blockchain;iot;gaming;serialization</PackageTags>
 		<PackageReleaseNotes>See https://github.com/JayArrowz/CompactPack/releases for release notes.</PackageReleaseNotes>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
