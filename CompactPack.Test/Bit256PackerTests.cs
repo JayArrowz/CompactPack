@@ -52,7 +52,7 @@ public class Bit256PackerTests
     {
         var packer = Bit256Packer.CreateHashStyle();
 
-        Assert.Equal(packer.FieldCount, 1);
+        Assert.Equal(1, packer.FieldCount);
         Assert.Equal("Hash", packer.Fields[0].Name);
         Assert.Equal(256, packer.TotalBitWidth);
     }
