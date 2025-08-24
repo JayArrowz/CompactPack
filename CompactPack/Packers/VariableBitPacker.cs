@@ -53,14 +53,15 @@ public abstract class VariableBitPacker<T, TBitPackerType> : BitPacker<T> where 
     public new TBitPackerType CreateSimilar()
     {
         var newPacker = new TBitPackerType();
-        foreach (var field in Fields)
+        for (int i = 0; i < FieldCount; i++)
         {
+            BitField field = _fields[i];
             newPacker.AddFieldInternal(field.Name, field.BitWidth, field.MinValue, field.MaxValue);
         }
         return newPacker;
     }
 
-    public new TBitPackerType Unpack(T packedValue)
+    public new virtual TBitPackerType Unpack(T packedValue)
     {
         base.Unpack(packedValue);
         return (TBitPackerType)this;
@@ -81,6 +82,12 @@ public abstract class VariableBitPacker<T, TBitPackerType> : BitPacker<T> where 
     public new TBitPackerType SetValue(string fieldName, long value)
     {
         base.SetValue(fieldName, value);
+        return (TBitPackerType)this;
+    }
+
+    public new TBitPackerType Reset()
+    {
+        base.Reset();
         return (TBitPackerType)this;
     }
 

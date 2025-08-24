@@ -40,7 +40,7 @@ public class Bit256PackerTests
     {
         var packer = Bit256Packer.CreateEthereumStyle();
 
-        Assert.Equal(3, packer.Fields.Count);
+        Assert.Equal(3, packer.FieldCount);
         Assert.Contains(packer.Fields, f => f.Name == "Address");
         Assert.Contains(packer.Fields, f => f.Name == "Value");
         Assert.Contains(packer.Fields, f => f.Name == "Nonce");
@@ -52,7 +52,7 @@ public class Bit256PackerTests
     {
         var packer = Bit256Packer.CreateHashStyle();
 
-        Assert.Single(packer.Fields);
+        Assert.Equal(packer.FieldCount, 1);
         Assert.Equal("Hash", packer.Fields[0].Name);
         Assert.Equal(256, packer.TotalBitWidth);
     }

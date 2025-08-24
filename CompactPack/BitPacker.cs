@@ -10,8 +10,10 @@ namespace CompactPack;
 /// </summary>
 public class BitPacker<T> where T : struct
 {
-    internal readonly List<BitField> _fields = new();
-    private readonly Dictionary<string, BigInteger> _values = new();
+    internal BitField[] _fields = Array.Empty<BitField>();
+    internal BigInteger[] _values = Array.Empty<BigInteger>();
+    private Dictionary<string, int> _fieldIndexMap = new();
+    private int _fieldCount = 0;
     private int _currentBitOffset = 0;
 
     /// <summary>
@@ -67,12 +69,67 @@ public class BitPacker<T> where T : struct
             throw new ArgumentException("Field name cannot be null or empty", nameof(name));
         if (bitWidth <= 0)
             throw new ArgumentOutOfRangeException(nameof(bitWidth), "Bit width must be positive");
-        if (Fields.Any(f => f.Name == name))
+        if (_fieldIndexMap.ContainsKey(name))
             throw new ArgumentException($"Field '{name}' already exists", nameof(name));
 
-        _fields.Add(new BitField(name, _currentBitOffset, bitWidth, minValue, maxValue));
+        BigInteger normalizedMax = maxValue - minValue;
+
+        if (typeof(T) == typeof(uint))
+        {
+            if (normalizedMax > uint.MaxValue)
+            {
+                throw new ArgumentException($"Field '{name}' normalized range [0, {normalizedMax}] doesn't fit in uint range [0, {uint.MaxValue}]");
+            }
+        }
+        else if (typeof(T) == typeof(int))
+        {
+            if (normalizedMax > int.MaxValue)
+            {
+                throw new ArgumentException($"Field '{name}' normalized range [0, {normalizedMax}] doesn't fit in int range [0, {int.MaxValue}]");
+            }
+        }
+        else if (typeof(T) == typeof(ulong))
+        {
+            if (normalizedMax > ulong.MaxValue)
+            {
+                throw new ArgumentException($"Field '{name}' normalized range [0, {normalizedMax}] doesn't fit in ulong range [0, {ulong.MaxValue}]");
+            }
+        }
+        else if (typeof(T) == typeof(long))
+        {
+            if (normalizedMax > long.MaxValue)
+            {
+                throw new ArgumentException($"Field '{name}' normalized range [0, {normalizedMax}] doesn't fit in long range [0, {long.MaxValue}]");
+            }
+        }
+
+        if (_fieldCount >= _fields.Length)
+        {
+            int newSize = Math.Max(4, _fields.Length * 2);
+            Array.Resize(ref _fields, newSize);
+            Array.Resize(ref _values, newSize);
+        }
+
+        _fields[_fieldCount] = new BitField(name, _currentBitOffset, bitWidth, minValue, maxValue);
+        _values[_fieldCount] = minValue;
+        _fieldIndexMap[name] = _fieldCount;
+        _fieldCount++;
         _currentBitOffset += bitWidth;
         return this;
+    }
+
+    /// <summary>
+    /// Gets field index
+    /// </summary>
+    /// <param name="fieldName">The field name</param>
+    /// <returns>Index of the field</returns>
+    /// <exception cref="ArgumentException"></exception>
+    public int GetFieldIndex(string fieldName)
+    {
+        if (!_fieldIndexMap.TryGetValue(fieldName, out int index))
+            throw new ArgumentException($"Field '{fieldName}' not found", nameof(fieldName));
+
+        return index;
     }
 
     /// <summary>
@@ -80,9 +137,10 @@ public class BitPacker<T> where T : struct
     /// </summary>
     public BitPacker<T> SetValue(string fieldName, BigInteger value)
     {
-        var field = GetField(fieldName);
+        var index = GetFieldIndex(fieldName);
+        var field = _fields[index];
         field.ValidateValue(value);
-        _values[fieldName] = value;
+        _values[index] = value;
         return this;
     }
 
@@ -101,8 +159,8 @@ public class BitPacker<T> where T : struct
     /// </summary>
     public BigInteger GetValue(string fieldName)
     {
-        var field = GetField(fieldName);
-        return _values.TryGetValue(fieldName, out var value) ? value : field.MinValue;
+        var index = GetFieldIndex(fieldName);
+        return _values[index];
     }
 
     /// <summary>
@@ -118,14 +176,15 @@ public class BitPacker<T> where T : struct
     /// <summary>
     /// Pack all field values into the target type
     /// </summary>
-    public T Pack()
+    public virtual T Pack()
     {
         BigInteger result = BigInteger.Zero;
 
-        foreach (var field in Fields)
+        for (int i = 0; i < _fieldCount; i++)
         {
-            var value = GetValue(field.Name);
-            var normalizedValue = field.NormalizeValue(value);
+            var field = _fields[i];
+            var value = _values[i];
+            var normalizedValue = value - field.MinValue;
             result |= (normalizedValue & field.Mask) << field.BitOffset;
         }
 
@@ -135,16 +194,17 @@ public class BitPacker<T> where T : struct
     /// <summary>
     /// Unpack a value and populate field values
     /// </summary>
-    public BitPacker<T> Unpack(T packedValue)
+    public virtual BitPacker<T> Unpack(T packedValue)
     {
         var bigIntValue = ConvertToBigInteger(packedValue);
-        _values.Clear();
 
-        foreach (var field in Fields)
+        for (int i = 0; i < _fieldCount; i++)
         {
-            var packedFieldValue = (bigIntValue >> field.BitOffset) & field.Mask;
-            var originalValue = field.DenormalizeValue(packedFieldValue);
-            _values[field.Name] = originalValue;
+            var field = _fields[i];
+            var packedFieldValue = (bigIntValue >> field.BitOffset);
+            var mask = (BigInteger.One << field.BitWidth) - 1;
+            packedFieldValue &= mask;
+            _values[i] = packedFieldValue + field.MinValue;
         }
 
         return this;
@@ -156,11 +216,24 @@ public class BitPacker<T> where T : struct
     public BitPacker<T> CreateSimilar()
     {
         var newPacker = new BitPacker<T>();
-        foreach (var field in Fields)
+        for (int i = 0; i < _fieldCount; i++)
         {
+            BitField field = Fields[i];
             newPacker.AddFieldInternal(field.Name, field.BitWidth, field.MinValue, field.MaxValue);
         }
         return newPacker;
+    }
+
+    /// <summary>
+    /// Resets values to field.MinValue
+    /// </summary>
+    public BitPacker<T> Reset()
+    {
+        for (int i = 0; i < _fieldCount; i++)
+        {
+            _values[i] = _fields[i].MinValue;
+        }
+        return this;
     }
 
     /// <summary>
@@ -171,7 +244,12 @@ public class BitPacker<T> where T : struct
     /// <summary>
     /// Get all field definitions
     /// </summary>
-    public IReadOnlyList<BitField> Fields => _fields.AsReadOnly();
+    public IReadOnlyList<BitField> Fields => _fields;
+
+    /// <summary>
+    /// Get all values
+    /// </summary>
+    public IReadOnlyList<BigInteger> Values => _values;
 
     /// <summary>
     /// Get total bit width used
@@ -182,6 +260,11 @@ public class BitPacker<T> where T : struct
     /// Get total bytes needed (rounded up)
     /// </summary>
     public int TotalBytesNeeded => BitHelper.BytesForBits(TotalBitWidth);
+
+    /// <summary>
+    /// The field count
+    /// </summary>
+    public int FieldCount => _fieldCount;
 
     /// <summary>
     /// Bit Limit for type
@@ -201,14 +284,13 @@ public class BitPacker<T> where T : struct
 
     private BitField GetField(string name)
     {
-        var field = Fields.FirstOrDefault(f => f.Name == name);
-        if (field == null)
-            throw new ArgumentException($"Field '{name}' not found", nameof(name));
-        return field;
+        var index = GetFieldIndex(name);
+        return _fields[index];
     }
 
     private BigInteger ConvertToBigInteger(T value)
     {
+        // Use pattern matching for better performance
         return value switch
         {
             BigInteger bi => bi,
@@ -216,6 +298,10 @@ public class BitPacker<T> where T : struct
             long l => new BigInteger(l),
             uint ui => new BigInteger(ui),
             int i => new BigInteger(i),
+            ushort us => new BigInteger(us),
+            short s => new BigInteger(s),
+            byte b => new BigInteger(b),
+            sbyte sb => new BigInteger(sb),
             _ => throw new NotSupportedException($"Type {typeof(T)} is not supported")
         };
     }
@@ -223,16 +309,76 @@ public class BitPacker<T> where T : struct
     private T ConvertFromBigInteger(BigInteger value)
     {
         if (typeof(T) == typeof(BigInteger))
+        {
             return (T)(object)value;
-        if (typeof(T) == typeof(ulong))
+        }
+        else if (typeof(T) == typeof(ulong))
+        {
+            if (value < 0 || value > ulong.MaxValue)
+                throw new OverflowException($"Value {value} is out of ulong range [0, {ulong.MaxValue}]");
             return (T)(object)(ulong)value;
-        if (typeof(T) == typeof(long))
+        }
+        else if (typeof(T) == typeof(long))
+        {
+            if (value < long.MinValue || value > long.MaxValue)
+                throw new OverflowException($"Value {value} is out of long range [{long.MinValue}, {long.MaxValue}]");
             return (T)(object)(long)value;
-        if (typeof(T) == typeof(uint))
+        }
+        else if (typeof(T) == typeof(uint))
+        {
+            if (value < 0 || value > uint.MaxValue)
+                throw new OverflowException($"Value {value} is out of uint range [0, {uint.MaxValue}]");
             return (T)(object)(uint)value;
-        if (typeof(T) == typeof(int))
+        }
+        else if (typeof(T) == typeof(int))
+        {
+            if (value < int.MinValue || value > int.MaxValue)
+                throw new OverflowException($"Value {value} is out of int range [{int.MinValue}, {int.MaxValue}]");
             return (T)(object)(int)value;
+        }
+        else if (typeof(T) == typeof(ushort))
+        {
+            if (value < 0 || value > ushort.MaxValue)
+                throw new OverflowException($"Value {value} is out of ushort range [0, {ushort.MaxValue}]");
+            return (T)(object)(ushort)value;
+        }
+        else if (typeof(T) == typeof(short))
+        {
+            if (value < short.MinValue || value > short.MaxValue)
+                throw new OverflowException($"Value {value} is out of short range [{short.MinValue}, {short.MaxValue}]");
+            return (T)(object)(short)value;
+        }
+        else if (typeof(T) == typeof(byte))
+        {
+            if (value < 0 || value > byte.MaxValue)
+                throw new OverflowException($"Value {value} is out of byte range [0, {byte.MaxValue}]");
+            return (T)(object)(byte)value;
+        }
+        else if (typeof(T) == typeof(sbyte))
+        {
+            if (value < sbyte.MinValue || value > sbyte.MaxValue)
+                throw new OverflowException($"Value {value} is out of sbyte range [{sbyte.MinValue}, {sbyte.MaxValue}]");
+            return (T)(object)(sbyte)value;
+        }
+        else
+        {
+            throw new NotSupportedException($"Type {typeof(T)} is not supported");
+        }
+    }
 
-        throw new NotSupportedException($"Type {typeof(T)} is not supported");
+    public ref BigInteger GetValueRef(string fieldName)
+    {
+        if (!_fieldIndexMap.TryGetValue(fieldName, out int index))
+            throw new ArgumentException($"Field '{fieldName}' not found", nameof(fieldName));
+
+        return ref _values[index];
+    }
+
+    public ref BigInteger GetValueRef(int fieldIndex)
+    {
+        if (fieldIndex < 0 || fieldIndex >= _fieldCount)
+            throw new ArgumentOutOfRangeException(nameof(fieldIndex));
+
+        return ref _values[fieldIndex];
     }
 }

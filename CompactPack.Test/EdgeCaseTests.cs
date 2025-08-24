@@ -68,7 +68,7 @@ public class EdgeCaseTests
 
         var similarPacker = originalPacker.CreateSimilar();
 
-        Assert.Equal(originalPacker.Fields.Count, similarPacker.Fields.Count);
+        Assert.Equal(originalPacker.FieldCount, similarPacker.FieldCount);
         Assert.Equal(0, similarPacker.GetValue("field1")); // Should be min value, not 100
         Assert.Equal(0, similarPacker.GetValue("field2")); // Should be min value, not 500
     }

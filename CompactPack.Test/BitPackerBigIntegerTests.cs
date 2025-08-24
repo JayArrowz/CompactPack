@@ -10,7 +10,7 @@ public class BitPackerBigIntegerTests
         var packer = new BitPacker<BigInteger>();
         packer.AddField("test", 8);
 
-        Assert.Single(packer.Fields);
+        Assert.Equal(1, packer.FieldCount);
         Assert.Equal("test", packer.Fields[0].Name);
         Assert.Equal(8, packer.Fields[0].BitWidth);
     }

@@ -19,6 +19,14 @@ public class PackingBenchmarks
     private Bit64Packer _sensorPacker;
     private Bit256Packer _dnaPacker;
     private UnlimitedBitPacker _unlimitedPacker;
+
+    private BitPacker<BigInteger> _gameStatsUnpacker;
+    private Bit32Packer _colorUnpacker;
+    private Bit64Packer _sensorUnpacker;
+    private Bit256Packer _dnaUnpacker;
+
+    private BitPacker<BigInteger> _rangeBasedPacker;
+    private BitPacker<BigInteger> _bitWidthBasedPacker;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 
     private BigInteger _gameStatsPackedValue;
@@ -51,6 +59,16 @@ public class PackingBenchmarks
             .AddField("BatteryLevel", PackRange.Of(0, 100))
             .AddField("SensorId", PackRange.Of(255))
             .AddField("Timestamp", PackRange.Of(65535)); // Reduced to fit in 64 bits
+
+        _rangeBasedPacker = new BitPacker<BigInteger>()
+            .AddField("Value1", PackRange.Of(255))
+            .AddField("Value2", PackRange.Of(1023))
+            .AddField("Value3", PackRange.Of(15));
+
+        _bitWidthBasedPacker = new BitPacker<BigInteger>()
+            .AddField("Value1", 8)
+            .AddField("Value2", 16)
+            .AddField("Value3", 8);
 
         // DNA Packer (simplified for benchmarking)
         _dnaPacker = Bit256Packer.Create();
@@ -97,6 +115,11 @@ public class PackingBenchmarks
                         .SetValue($"Part{i}_H3", 8);
         }
         _dnaPackedValue = tempDnaPacker.Pack();
+
+        _gameStatsUnpacker = _gameStatsPacker.CreateSimilar();
+        _colorUnpacker = _colorPacker.CreateSimilar();
+        _sensorUnpacker = _sensorPacker.CreateSimilar();
+        _dnaUnpacker = _dnaPacker.CreateSimilar();
     }
 
     #region Packing Benchmarks
@@ -160,31 +183,37 @@ public class PackingBenchmarks
     #endregion
 
     #region Unpacking Benchmarks
-
     [Benchmark]
     [BenchmarkCategory("GameStats")]
     public int CompactPack_GameStats_Unpack()
     {
-        var unpacker = _gameStatsPacker.CreateSimilar().Unpack(_gameStatsPackedValue);
-        return unpacker.GetValueAsInt("Health");
+        _gameStatsUnpacker.Unpack(_gameStatsPackedValue);
+        return _gameStatsUnpacker.GetValueAsInt("Health");
     }
 
     [Benchmark]
     [BenchmarkCategory("Color")]
     public int CompactPack_Color_Unpack()
     {
-        var unpacker = _colorPacker.CreateSimilar().Unpack(_colorPackedValue);
-        return unpacker.GetValueAsInt("Red");
+        _colorUnpacker.Unpack(_colorPackedValue);
+        return _colorUnpacker.GetValueAsInt("Red");
     }
 
     [Benchmark]
     [BenchmarkCategory("Sensor")]
     public int CompactPack_Sensor_Unpack()
     {
-        var unpacker = _sensorPacker.CreateSimilar().Unpack(_sensorPackedValue);
-        return unpacker.GetValueAsInt("Temperature");
+        _sensorUnpacker.Unpack(_sensorPackedValue);
+        return _sensorUnpacker.GetValueAsInt("Temperature");
     }
 
+    [Benchmark]
+    [BenchmarkCategory("Specialized")]
+    public int Bit256Packer_DNA_Unpack()
+    {
+        _dnaUnpacker.Unpack(_dnaPackedValue);
+        return _dnaUnpacker.GetValueAsInt("Part0_P1");
+    }
     #endregion
 
     #region Memory Usage Benchmarks
@@ -205,7 +234,7 @@ public class PackingBenchmarks
     [BenchmarkCategory("Memory")]
     public BigInteger[] CompactPack_Array()
     {
-        var packer = _gameStatsPacker.CreateSimilar();
+        var packer = _gameStatsPacker.Reset();
         return new BigInteger[]
         {
             packer.SetValue("Health", 750).SetValue("Level", 42).SetValue("Experience", 125000).SetValue("Class", 3).Pack(),
@@ -222,7 +251,7 @@ public class PackingBenchmarks
     [BenchmarkCategory("Specialized")]
     public BigInteger Bit256Packer_DNA_Pack()
     {
-        var packer = _dnaPacker.CreateSimilar();
+        var packer = _dnaPacker.Reset();
         for (int i = 0; i < 10; i++)
         {
             packer.SetValue($"Part{i}_P1", 32)
@@ -231,14 +260,6 @@ public class PackingBenchmarks
                   .SetValue($"Part{i}_H3", 8);
         }
         return packer.Pack();
-    }
-
-    [Benchmark]
-    [BenchmarkCategory("Specialized")]
-    public int Bit256Packer_DNA_Unpack()
-    {
-        var unpacker = _dnaPacker.CreateSimilar().Unpack(_dnaPackedValue);
-        return unpacker.GetValueAsInt("Part0_P1");
     }
 
     [Benchmark]
@@ -305,30 +326,22 @@ public class PackingBenchmarks
     [BenchmarkCategory("FieldTypes")]
     public BigInteger Range_Based_Fields()
     {
-        var packer = new BitPacker<BigInteger>()
-            .AddField("Value1", PackRange.Of(255))      // Optimal 8 bits
-            .AddField("Value2", PackRange.Of(1023))     // Optimal 10 bits
-            .AddField("Value3", PackRange.Of(15));      // Optimal 4 bits
-
-        return packer.SetValue("Value1", 200)
-                     .SetValue("Value2", 500)
-                     .SetValue("Value3", 10)
-                     .Pack();
+        return _rangeBasedPacker.Reset()
+                               .SetValue("Value1", 200)
+                               .SetValue("Value2", 500)
+                               .SetValue("Value3", 10)
+                               .Pack();
     }
 
     [Benchmark]
     [BenchmarkCategory("FieldTypes")]
     public BigInteger BitWidth_Based_Fields()
     {
-        var packer = new BitPacker<BigInteger>()
-            .AddField("Value1", 8)    // Explicit 8 bits
-            .AddField("Value2", 16)   // Explicit 16 bits (wastes 6 bits)
-            .AddField("Value3", 8);   // Explicit 8 bits (wastes 4 bits)
-
-        return packer.SetValue("Value1", 200)
-                     .SetValue("Value2", 500)
-                     .SetValue("Value3", 10)
-                     .Pack();
+        return _bitWidthBasedPacker.Reset()
+                                  .SetValue("Value1", 200)
+                                  .SetValue("Value2", 500)
+                                  .SetValue("Value3", 10)
+                                  .Pack();
     }
 
     #endregion

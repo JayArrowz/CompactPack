@@ -27,7 +27,7 @@ public class Bit32SignedPackerTests
             .AddField("field2", 15)
             .AddField("field3", 6); // Total: 31 bits (exactly at limit)
 
-        Assert.Equal(3, packer.Fields.Count);
+        Assert.Equal(3, packer.FieldCount);
         Assert.Equal(31, packer.TotalBitWidth);
     }
 
@@ -127,7 +127,7 @@ public class Bit32SignedPackerTests
         var packer = Bit32SignedPacker.Create()
             .AddFields(5, "field1", "field2", "field3", "field4", "field5"); // 25 bits total
 
-        Assert.Equal(5, packer.Fields.Count);
+        Assert.Equal(5, packer.FieldCount);
         Assert.Equal(25, packer.TotalBitWidth);
     }
 
@@ -137,7 +137,7 @@ public class Bit32SignedPackerTests
         var packer = Bit32SignedPacker.Create()
             .AddFields(PackRange.Of(31), "f1", "f2", "f3", "f4", "f5"); // 5 bits each, 25 total
 
-        Assert.Equal(5, packer.Fields.Count);
+        Assert.Equal(5, packer.FieldCount);
         Assert.Equal(25, packer.TotalBitWidth);
     }
 

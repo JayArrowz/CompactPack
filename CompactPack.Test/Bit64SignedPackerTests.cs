@@ -111,7 +111,7 @@ public class Bit64SignedPackerTests
             .AddField("field1", 32)
             .AddFieldWithBytes("field2", 3); // 24 bits, total = 56 bits
 
-        Assert.Equal(2, packer.Fields.Count);
+        Assert.Equal(2, packer.FieldCount);
         Assert.Equal(56, packer.TotalBitWidth);
     }
 
