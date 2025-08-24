@@ -12,7 +12,6 @@ A high-performance .NET library for efficient bit packing that allows you to sto
 - **Type Safe**: Strongly typed with compile-time validation
 - **Flexible**: Support for BigInteger (unlimited), 64-bit, 32-bit, and 256-bit storage
 - **Range-Based**: Define value ranges and let CompactPack calculate optimal bit usage
-- **High Performance**: Zero-allocation packing/unpacking operations
 
 ## 📦 Installation
 
@@ -395,7 +394,7 @@ dotnet test
 
 ## 📋 Requirements
 
-- .NET 6.0 or higher
+- .NET Standard 2.0 or higher
 - System.Numerics (included in .NET)
 
 ## 🤝 Contributing
