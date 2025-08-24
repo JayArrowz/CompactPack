@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>12</LangVersion>
+		<Description>A high-performance .NET library for efficient bit packing that stores multiple values in a single integer with minimal memory usage. Features range-based automatic bit calculation, multiple storage types (32/64/256-bit, BigInteger), and type-safe field validation.</Description>
+		<Summary>High-performance bit packing library for .NET with range-based API and multiple storage types</Summary>
+		<Authors>JayArrowz</Authors>
+		<Company>JayArrowz</Company>
+		<Product>CompactPack</Product>
+		<Copyright>Copyright © JayArrowz 2024</Copyright>
+		<PackageProjectUrl>https://github.com/JayArrowz/CompactPack</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/JayArrowz/CompactPack</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageTags>bitpacking;compression;packing;bits;storage;memory;optimization;performance;range;biginteger;blockchain;iot;gaming;serialization</PackageTags>
+		<PackageReleaseNotes>See https://github.com/JayArrowz/CompactPack/releases for release notes.</PackageReleaseNotes>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<DebugType>portable</DebugType>
+		<NoWarn>$(NoWarn);CS1591</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
+		<PackageReference Include="PolySharp" Version="1.15.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<!-- Development Dependencies -->
+	<ItemGroup>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+		<PackageReference Include="MinVer" Version="6.0.0" PrivateAssets="All" />
+	</ItemGroup>
+</Project>
