@@ -318,7 +318,7 @@ Console.WriteLine($"Can fit 8-bit field: {packer256.CanFitField(8)}");
 Console.WriteLine($"Max value for remaining bits: {packer256.MaxValueForRemainingBits}");
 ```
 
-## 📈 Performance Benefits
+## 📈 Memory Benefits
 
 | Scenario | Traditional Storage | CompactPack | Savings |
 |----------|-------------------|-------------|---------|
@@ -358,7 +358,6 @@ CompactPack includes comprehensive tests covering:
 - Range validation and edge cases
 - Large value handling (BigInteger)
 - Storage type limits and overflow detection
-- Performance benchmarks
 
 ```bash
 dotnet test
