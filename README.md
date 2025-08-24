@@ -42,9 +42,18 @@ characterPacker.SetValue("Health", 750)
 // Pack into single integer (41 bits total = 6 bytes instead of 16 bytes)
 var packed = characterPacker.Pack();
 
-// Unpack later
-var unpacker = characterPacker.CreateSimilar().Unpack(packed);
-Console.WriteLine($"Health: {unpacker.GetValue("Health")}"); // 750
+// Unpack later - recreate the same packer structure
+var unpacker = new BitPacker<BigInteger>()
+    .AddField("Health", PackRange.Of(1000))
+    .AddField("Level", PackRange.Of(1, 100))
+    .AddField("Experience", PackRange.Of(999999))
+    .AddField("Class", PackRange.Of(15))
+    .Unpack(packed);
+
+Console.WriteLine($"Health: {unpacker.GetValue("Health")}");     // 750
+Console.WriteLine($"Level: {unpacker.GetValue("Level")}");       // 42
+Console.WriteLine($"Experience: {unpacker.GetValue("Experience")}"); // 125000
+Console.WriteLine($"Class: {unpacker.GetValue("Class")}");       // 3
 ```
 
 ## 📊 Core Concepts
@@ -100,6 +109,8 @@ var position = coordinatePacker.SetValue("X", -1500)
                                .SetValue("Rotation", 270)
                                .Pack();
 ```
+
+### Game Character Stats
 
 ```csharp
 var playerPacker = new BitPacker<BigInteger>()
@@ -283,6 +294,25 @@ packer.AddFields(6, "Strength", "Dexterity", "Constitution", "Intelligence", "Wi
 
 // Add multiple fields with same range
 packer.AddFields(PackRange.Of(20), "Skill1", "Skill2", "Skill3", "Skill4");
+```
+
+### Unpacking Data
+
+```csharp
+// Method 1: Manual recreation (when you know the structure)
+var unpacker = new BitPacker<BigInteger>()
+    .AddField("Health", PackRange.Of(1000))
+    .AddField("Level", PackRange.Of(1, 100))
+    .AddField("Experience", PackRange.Of(999999))
+    .AddField("Class", PackRange.Of(15))
+    .Unpack(packedData);
+
+// Method 2: Using CreateSimilar (copies field structure)
+var unpacker2 = originalPacker.CreateSimilar().Unpack(packedData);
+
+// Method 3: Reuse the same packer instance
+originalPacker.Unpack(packedData); // Overwrites current values
+var health = originalPacker.GetValue("Health");
 ```
 
 ### Field Information and Validation
