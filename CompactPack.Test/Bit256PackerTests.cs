@@ -111,4 +111,103 @@ public class Bit256PackerTests
         var expectedMaxValue = (BigInteger.One << (256 - 4)) - 1;
         Assert.Equal(expectedMaxValue, packer.MaxValueForRemainingBits);
     }
+
+    [Fact]
+    public void PackUnpack_NegativeValues_ShouldRoundTrip()
+    {
+        var packer = Bit256Packer.Create()
+            .AddField("NegativeField", PackRange.Of(-100, 100))  // Range from -100 to 100
+            .AddField("PositiveField", PackRange.Of(0, 50));     // Regular positive field
+
+        // Set values including negative
+        packer.SetValue("NegativeField", -75)
+              .SetValue("PositiveField", 25);
+
+        var packed = packer.Pack();
+        var unpacker = packer.CreateSimilar().Unpack(packed);
+
+        // Verify values round-trip correctly
+        Assert.Equal(-75, unpacker.GetValueAsInt("NegativeField"));
+        Assert.Equal(25, unpacker.GetValueAsInt("PositiveField"));
+    }
+
+    [Fact]
+    public void PackUnpack_MixedNegativePositive_ShouldHandleCorrectly()
+    {
+        var packer = Bit256Packer.Create()
+            .AddField("Temp", PackRange.Of(-40, 125))      // Temperature range
+            .AddField("Altitude", PackRange.Of(-1000, 9000)) // Altitude with negative values
+            .AddField("Pressure", PackRange.Of(300, 1200));  // Positive only
+
+        packer.SetValue("Temp", -10)
+              .SetValue("Altitude", -500)
+              .SetValue("Pressure", 1013);
+
+        var packed = packer.Pack();
+        var unpacker = packer.CreateSimilar().Unpack(packed);
+
+        Assert.Equal(-10, unpacker.GetValueAsInt("Temp"));
+        Assert.Equal(-500, unpacker.GetValueAsInt("Altitude"));
+        Assert.Equal(1013, unpacker.GetValueAsInt("Pressure"));
+    }
+
+    [Fact]
+    public void SetValue_NegativeOutsideRange_ShouldThrow()
+    {
+        var packer = Bit256Packer.Create()
+            .AddField("TestField", PackRange.Of(-50, 50));
+
+        packer.SetValue("TestField", -50);
+        packer.SetValue("TestField", 50);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => packer.SetValue("TestField", -51));
+        Assert.Throws<ArgumentOutOfRangeException>(() => packer.SetValue("TestField", 51));
+    }
+
+    [Fact]
+    public void Normalization_NegativeValues_ShouldWorkCorrectly()
+    {
+        var packer = Bit256Packer.Create()
+            .AddField("TestField", PackRange.Of(-20, 30));
+
+        packer.SetValue("TestField", -20);
+        var packed1 = packer.Pack();
+
+        packer.SetValue("TestField", 0);
+        var packed2 = packer.Pack();
+
+        packer.SetValue("TestField", 30);
+        var packed3 = packer.Pack();
+
+        Assert.NotEqual(packed1, packed2);
+        Assert.NotEqual(packed2, packed3);
+        Assert.NotEqual(packed1, packed3);
+    }
+
+    [Fact]
+    public void LargeNegativeRange_ShouldPackCorrectly()
+    {
+        var packer = Bit256Packer.Create()
+            .AddField("LargeRange", PackRange.Of(-1000000, 1000000));
+
+        packer.SetValue("LargeRange", -1000000);
+        var packedMin = packer.Pack();
+
+        packer.SetValue("LargeRange", 1000000);
+        var packedMax = packer.Pack();
+
+        packer.SetValue("LargeRange", 0);
+        var packedZero = packer.Pack();
+
+        // Unpack and verify
+        var unpacker = packer.CreateSimilar();
+        unpacker.Unpack(packedMin);
+        Assert.Equal(-1000000, unpacker.GetValueAsInt("LargeRange"));
+
+        unpacker.Unpack(packedMax);
+        Assert.Equal(1000000, unpacker.GetValueAsInt("LargeRange"));
+
+        unpacker.Unpack(packedZero);
+        Assert.Equal(0, unpacker.GetValueAsInt("LargeRange"));
+    }
 }

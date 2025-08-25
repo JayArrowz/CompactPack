@@ -1,6 +1,7 @@
 ﻿namespace CompactPack.Packers;
 
 using System;
+using System.Buffers;
 using System.Numerics;
 
 /// <summary>
@@ -37,60 +38,85 @@ public class Bit256Packer : VariableBitPacker<BigInteger, Bit256Packer>
     /// </summary>
     public BigInteger MaxValueForRemainingBits => RemainingBits > 0 ? (BigInteger.One << RemainingBits) - 1 : 0;
 
-    /// <summary>
-    /// Validate that the packed result fits within 256 bits
-    /// </summary>
     public override BigInteger Pack()
     {
         int totalBytes = TotalBytesNeeded;
-        byte[] buffer = new byte[totalBytes];
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(totalBytes);
+        try
+        {
+            Array.Clear(buffer, 0, totalBytes);
+
+            for (int i = 0; i < FieldCount; i++)
+            {
+                var field = _fields[i];
+                var normalizedValue = _values[i] - field.MinValue;
+                WriteUInt64ToBuffer(buffer, (ulong)normalizedValue, field.BitOffset, field.BitWidth);
+            }
+
+            return new BigInteger(buffer);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    public override Bit256Packer Unpack(BigInteger packedValue)
+    {
+        byte[] bytes = packedValue.ToByteArray();
+        int totalBytes = TotalBytesNeeded;
+
+        if (bytes.Length < totalBytes)
+        {
+            Array.Resize(ref bytes, totalBytes);
+        }
 
         for (int i = 0; i < FieldCount; i++)
         {
             var field = _fields[i];
-            var normalizedValue = _values[i] - field.MinValue;
-            WriteBitsToBuffer(buffer, normalizedValue, field.BitOffset, field.BitWidth);
+            ulong fieldValue = 0;
+            for (int j = 0; j < field.BitWidth; j++)
+            {
+                int absoluteBitPos = field.BitOffset + j;
+                int byteIndex = absoluteBitPos / 8;
+                int bitIndex = absoluteBitPos % 8;
+
+                if (byteIndex < bytes.Length)
+                {
+                    bool bitSet = (bytes[byteIndex] & (1 << bitIndex)) != 0;
+                    if (bitSet)
+                    {
+                        fieldValue |= (1UL << j);
+                    }
+                }
+            }
+
+            _values[i] = fieldValue + field.MinValue;
         }
 
-        return new BigInteger(buffer);
+        return this;
     }
 
-    private void WriteBitsToBuffer(byte[] buffer, BigInteger value, int bitOffset, int bitWidth)
+    private static void WriteUInt64ToBuffer(byte[] buffer, ulong value, int bitOffset, int bitWidth)
     {
-        byte[] valueBytes = value.ToByteArray();
         if (bitOffset % 8 == 0 && bitWidth % 8 == 0)
         {
             int byteOffset = bitOffset / 8;
             int byteWidth = bitWidth / 8;
 
-            int bytesToCopy = Math.Min(byteWidth, valueBytes.Length);
-            Array.Copy(valueBytes, 0, buffer, byteOffset, bytesToCopy);
-
-            if (bytesToCopy < byteWidth)
+            for (int i = 0; i < byteWidth; i++)
             {
-                Array.Clear(buffer, byteOffset + bytesToCopy, byteWidth - bytesToCopy);
+                buffer[byteOffset + i] = (byte)(value >> (i * 8));
             }
-
             return;
         }
-
         for (int i = 0; i < bitWidth; i++)
         {
             int absoluteBitPos = bitOffset + i;
             int byteIndex = absoluteBitPos / 8;
             int bitIndex = absoluteBitPos % 8;
 
-            bool bitSet;
-            if (i < valueBytes.Length * 8)
-            {
-                int valueByteIndex = i / 8;
-                int valueBitIndex = i % 8;
-                bitSet = (valueBytes[valueByteIndex] & (1 << valueBitIndex)) != 0;
-            }
-            else
-            {
-                bitSet = false;
-            }
+            bool bitSet = (value & (1UL << i)) != 0;
 
             if (bitSet)
             {
