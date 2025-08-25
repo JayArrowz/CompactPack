@@ -13,7 +13,7 @@
 		<RepositoryUrl>https://github.com/JayArrowz/CompactPack</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageReadmeFile>../README.md</PackageReadmeFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageTags>bitpacking;compression;packing;bits;storage;memory;optimization;performance;range;biginteger;blockchain;iot;gaming;serialization</PackageTags>
 		<PackageReleaseNotes>See https://github.com/JayArrowz/CompactPack/releases for release notes.</PackageReleaseNotes>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -24,7 +24,9 @@
 		<DebugType>portable</DebugType>
 		<NoWarn>$(NoWarn);CS1591</NoWarn>
 	</PropertyGroup>
-
+	<ItemGroup>
+		<None Include="../README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
 		<PackageReference Include="PolySharp" Version="1.15.0">
