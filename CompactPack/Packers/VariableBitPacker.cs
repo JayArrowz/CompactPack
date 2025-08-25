@@ -85,9 +85,9 @@ public abstract class VariableBitPacker<T, TBitPackerType> : BitPacker<T> where 
         return (TBitPackerType)this;
     }
 
-    public new TBitPackerType Reset()
+    public new TBitPackerType ResetValues()
     {
-        base.Reset();
+        base.ResetValues();
         return (TBitPackerType)this;
     }
 

@@ -234,7 +234,7 @@ public class PackingBenchmarks
     [BenchmarkCategory("Memory")]
     public BigInteger[] CompactPack_Array()
     {
-        var packer = _gameStatsPacker.Reset();
+        var packer = _gameStatsPacker.ResetValues();
         return new BigInteger[]
         {
             packer.SetValue("Health", 750).SetValue("Level", 42).SetValue("Experience", 125000).SetValue("Class", 3).Pack(),
@@ -251,7 +251,7 @@ public class PackingBenchmarks
     [BenchmarkCategory("Specialized")]
     public BigInteger Bit256Packer_DNA_Pack()
     {
-        var packer = _dnaPacker.Reset();
+        var packer = _dnaPacker.ResetValues();
         for (int i = 0; i < 10; i++)
         {
             packer.SetValue($"Part{i}_P1", 32)
@@ -326,7 +326,7 @@ public class PackingBenchmarks
     [BenchmarkCategory("FieldTypes")]
     public BigInteger Range_Based_Fields()
     {
-        return _rangeBasedPacker.Reset()
+        return _rangeBasedPacker.ResetValues()
                                .SetValue("Value1", 200)
                                .SetValue("Value2", 500)
                                .SetValue("Value3", 10)
@@ -337,7 +337,7 @@ public class PackingBenchmarks
     [BenchmarkCategory("FieldTypes")]
     public BigInteger BitWidth_Based_Fields()
     {
-        return _bitWidthBasedPacker.Reset()
+        return _bitWidthBasedPacker.ResetValues()
                                   .SetValue("Value1", 200)
                                   .SetValue("Value2", 500)
                                   .SetValue("Value3", 10)

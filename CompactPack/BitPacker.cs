@@ -227,7 +227,7 @@ public class BitPacker<T> where T : struct
     /// <summary>
     /// Resets values to field.MinValue
     /// </summary>
-    public BitPacker<T> Reset()
+    public BitPacker<T> ResetValues()
     {
         for (int i = 0; i < _fieldCount; i++)
         {
