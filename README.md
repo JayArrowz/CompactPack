@@ -5,6 +5,7 @@ A high-performance .NET library for efficient bit packing that allows you to sto
 [![.NET](https://img.shields.io/badge/.NET-Standard2.0%2B-purple)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![NuGet](https://img.shields.io/nuget/v/CompactPack.svg)](https://www.nuget.org/packages/CompactPack)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://buymeacoffee.com/jayarrowz)
 
 ## 🚀 Why CompactPack?
 
@@ -295,6 +296,31 @@ packer.AddFields(6, "Strength", "Dexterity", "Constitution", "Intelligence", "Wi
 packer.AddFields(PackRange.Of(20), "Skill1", "Skill2", "Skill3", "Skill4");
 ```
 
+### Reusing Packer Instances
+
+```csharp
+// Create a packer once and reuse it with ResetValues()
+var statsPacker = new BitPacker<BigInteger>()
+    .AddField("Health", PackRange.Of(1000))
+    .AddField("Mana", PackRange.Of(500))
+    .AddField("Level", PackRange.Of(1, 100));
+
+// Use for multiple entities without creating new instances
+var player1Stats = statsPacker.ResetValues()
+                             .SetValue("Health", 750)
+                             .SetValue("Mana", 300)
+                             .SetValue("Level", 42)
+                             .Pack();
+
+var player2Stats = statsPacker.ResetValues()
+                             .SetValue("Health", 800)
+                             .SetValue("Mana", 250)
+                             .SetValue("Level", 38)
+                             .Pack();
+
+// Much more efficient than creating new packers each time!
+```
+
 ### Unpacking Data
 
 ```csharp
@@ -309,8 +335,8 @@ var unpacker = new BitPacker<BigInteger>()
 // Method 2: Using CreateSimilar (copies field structure)
 var unpacker2 = originalPacker.CreateSimilar().Unpack(packedData);
 
-// Method 3: Reuse the same packer instance
-originalPacker.Unpack(packedData); // Overwrites current values
+// Method 3: Reuse the same packer instance with ResetValues()
+originalPacker.ResetValues().Unpack(packedData); // Resets then unpacks
 var health = originalPacker.GetValue("Health");
 ```
 
@@ -346,6 +372,13 @@ Console.WriteLine($"Remaining capacity: {packer256.RemainingBits} bits");
 Console.WriteLine($"Can fit 8-bit field: {packer256.CanFitField(8)}");
 Console.WriteLine($"Max value for remaining bits: {packer256.MaxValueForRemainingBits}");
 ```
+
+## ⚡ Performance Tips
+
+- **Reuse packer instances** with `ResetValues()` instead of creating new ones for each operation
+- **Predefine packer configurations** during initialization and reuse them
+- **Use specialized packers** (Bit32Packer, Bit64Packer) when possible for better performance
+- **Consider object pooling** for high-frequency packing operations in performance-critical code
 
 ## 📈 Memory Benefits
 
@@ -400,6 +433,12 @@ dotnet test
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit pull requests, report bugs, or suggest features.
+
+## ☕ Support
+
+If you find CompactPack useful and want to support its development:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://buymeacoffee.com/jayarrowz)
 
 ## 📄 License
 
